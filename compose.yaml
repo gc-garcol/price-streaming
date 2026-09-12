@@ -1,0 +1,142 @@
+services:
+  redis-stack:
+    image: redis/redis-stack:latest
+    container_name: redis
+    ports:
+      - "6379:6379"  # Redis port
+      - "8001:8001"  # RedisInsight port
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: pricing
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U username -d debezium" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      # Address the broker advertises to clients that connect to the Kafka API.
+      # Use the internal addresses to connect to the Redpanda brokers'
+      # from inside the same Docker network.
+      # Use the external addresses to connect to the Redpanda brokers'
+      # from outside the Docker network.
+      - --advertise-kafka-addr internal://kafka:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      # Address the broker advertises to clients that connect to the HTTP Proxy.
+      - --advertise-pandaproxy-addr internal://kafka:8082,external://localhost:18082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      # Redpanda brokers use the RPC API to communicate with each other internally.
+      - --rpc-addr kafka:33145
+      - --advertise-rpc-addr kafka:33145
+      # Mode dev-container uses well-known configuration properties for development in containers.
+      - --mode dev-container
+      # Tells Seastar (the framework Redpanda uses under the hood) to use 1 core on the system.
+      - --smp 1
+      # Keep every CDC record forever (the default is 7 days) so the sink can be
+      # replayed from offset 0 at any time. Cluster properties are applied when the
+      # `kafka` volume is first created — on an existing volume set it with
+      # `rpk cluster config set log_retention_ms -1` instead.
+      - --set redpanda.log_retention_ms=-1
+      - --default-log-level=info
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.7
+    container_name: kafka
+    volumes:
+      - kafka:/var/lib/redpanda/data
+    ports:
+      - 18081:18081
+      - 18082:18082
+      - 19092:19092
+      - 19644:9644
+  console:
+    container_name: kafka-console
+    image: docker.redpanda.com/redpandadata/console:v2.6.0
+    entrypoint: /bin/sh
+    command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["kafka:9092"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://kafka:8081"]
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://kafka:9644"]
+    ports:
+      - 8082:8080
+    depends_on:
+      - kafka
+  connect:
+    container_name: connect
+    image: quay.io/debezium/connect:2.7.3.Final
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kafka
+      - postgres
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
+      - STATUS_STORAGE_TOPIC=my_connect_statuses
+      - PLUGIN_PATH=/kafka/connect
+      - KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      # Envelopes must carry their Connect schema, otherwise the JDBC sink cannot
+      # infer column types. Only `CONNECT_`-prefixed variables become worker
+      # properties in this image — the bare `*_SCHEMAS_ENABLE` names are ignored.
+      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=true
+      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=true
+      # - CONNECT_REST_EXTENSION_CLASSES=io.debezium.kcrestextension.DebeziumConnectRestExtension
+  debezium-ui:
+    container_name: debezium-ui
+    image: quay.io/debezium/debezium-ui:1.9
+    platform: linux/amd64
+    ports:
+      - "8081:8080"
+    environment:
+      - KAFKA_CONNECT_URIS=http://connect:8083
+    depends_on:
+      - connect
+  centrifugo:
+    image: centrifugo/centrifugo:v4.1.2
+    ports:
+      - "8000:8000"
+      - "10000:10000"
+    environment:
+      CENTRIFUGO_ADMIN: "true"
+      CENTRIFUGO_GRPC_API: "true"
+      CENTRIFUGO_GRPC_API_PORT: "10000"
+      CENTRIFUGO_ADMIN_SECRET: admin
+      CENTRIFUGO_ADMIN_PASSWORD: admin
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-price-streaming-api-key}
+      CENTRIFUGO_ALLOW_ANONYMOUS_CONNECT_WITHOUT_TOKEN: "true"
+      CENTRIFUGO_ANONYMOUS: "true"
+      CENTRIFUGO_HISTORY_SIZE: "100"
+      CENTRIFUGO_HISTORY_TTL: "300s"
+    volumes:
+      - ./centrifugo.json:/centrifugo/config.json
+    command: centrifugo --config /centrifugo/config.json
+volumes:
+  kafka:
+    driver: local

@@ -1,0 +1,82 @@
+@startuml
+skinparam backgroundColor #0b0e11
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor #f0b90b
+skinparam ArrowFontColor #848e9c
+skinparam titleFontColor #f0b90b
+skinparam titleFontSize 16
+skinparam rectangle {
+  BackgroundColor #1e2329
+  BorderColor #2b3139
+  FontColor #eaecef
+}
+skinparam database {
+  BackgroundColor #161a1e
+  BorderColor #f0b90b
+  FontColor #eaecef
+}
+skinparam queue {
+  BackgroundColor #161a1e
+  BorderColor #f0b90b
+  FontColor #eaecef
+}
+skinparam package {
+  BackgroundColor #0f1418
+  BorderColor #2b3139
+  FontColor #f0b90b
+}
+
+title price-streaming — high level design
+
+rectangle "Browser UI\nindex.html" as UI
+
+package "write path" {
+  rectangle "REST API\nPriceConfigController" as API
+  database "PostgreSQL\nprice_configs\noutboxevent" as PG
+  rectangle "Debezium\nEventRouter SMT" as DBZ
+  queue "Kafka / Redpanda\nPRICE_CONFIG.events" as KAFKA
+}
+
+package "price sources" {
+  rectangle "SymbolPriceFeedScheduler\npolling snapshot\nfixed interval" as SCHED
+  rectangle "SymbolPriceStreamClient\nrealtime websocket\ncontinuous ticks" as WS
+}
+
+package "ingest" {
+  rectangle "PriceConfigEventConsumer\nkafka listener" as CONS
+  rectangle "PriceConfigScheduler\nDB reconcile 5m" as RECON
+}
+
+rectangle "LMAX Disruptor ring buffer\nProducerType.MULTI · 4096 slots" as RB #161a1e
+
+rectangle "H1 domain\nPriceState + band" as H1
+rectangle "H2 caching\nbatch" as H2
+rectangle "H3 publishing\nbatch" as H3
+rectangle "H4 cleanup\nevent.reset()" as H4
+
+database "Redis\nper-symbol hashes\nTTL 30m" as REDIS
+rectangle "Centrifugo\nREST or gRPC" as CF
+
+UI -right-> API : REST — configs + cached page
+API -down-> PG : one transaction
+PG -down-> DBZ : logical replication
+DBZ -down-> KAFKA
+KAFKA -> CONS
+
+CONS -down-> RB : PRICE_CONFIG\nPRICE_CONFIG_DROP
+RECON -down-> RB : PRICE_CONFIG
+SCHED -down-> RB : SYMBOL_PRICE
+WS -down-> RB : SYMBOL_PRICE
+
+RB -down-> H1 : sequence n
+H1 -right-> H2 : then
+H2 -right-> H3 : then
+H3 -right-> H4 : then
+
+H2 -down-> REDIS : write / evict
+H3 -down-> CF : changed configs
+CF -up-> UI : websocket push
+REDIS -up-> H1 : startup restore
+
+@enduml

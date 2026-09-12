@@ -1,0 +1,109 @@
+server:
+  port: 8080
+  shutdown: graceful
+---
+spring:
+  application:
+    name: price-streaming
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+  task:
+    scheduling:
+      pool:
+        size: 4
+
+  messages:
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:pricing}
+    username: ${POSTGRES_USER:username}
+    password: ${POSTGRES_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+
+  liquibase:
+    enabled: true
+    default-schema: public
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    consumer:
+      group-id: ${KAFKA_GROUP_ID:price-streaming}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  jpa:
+    hibernate:
+      # Liquibase owns the schema; Hibernate only checks that entities agree with it.
+      ddl-auto: validate
+    open-in-view: false
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+---
+
+price-state:
+  cache:
+    ttl: ${PRICE_STATE_CACHE_TTL:30m}
+    renew-interval: ${PRICE_STATE_CACHE_RENEW_INTERVAL:5m}
+  price-config:
+    refresh-interval: ${PRICE_CONFIG_REFRESH_INTERVAL:5m}
+
+  symbol-feed:
+    min-latency: ${SYMBOL_FEED_MIN_LATENCY:1s}
+    max-latency: ${SYMBOL_FEED_MAX_LATENCY:5s}
+    price-jitter-percent: ${SYMBOL_FEED_PRICE_JITTER:5}
+    fetch-interval: ${SYMBOL_FEED_FETCH_INTERVAL:1m}
+    burst-interval: ${SYMBOL_FEED_BURST_INTERVAL:200ms}
+    max-burst: ${SYMBOL_FEED_MAX_BURST:10}
+    burst-publish-ratio: ${SYMBOL_FEED_BURST_PUBLISH_RATIO:0.3333}
+
+---
+
+kafka:
+  topic:
+    price-config-events: PRICE_CONFIG.events
+  group:
+    price-config-events: ${KAFKA_PRICE_CONFIG_GROUP_ID:price-streaming-price-config}
+
+---
+
+disruptor:
+  ringBufferPowSize: 12
+  shutdownTimeoutSeconds: 10
+  waitStrategy: BLOCKING
+  waitTimeout: 100ms
+
+disruptor-handler:
+  maxHandler2BatchSize: ${DISRUPTOR_HANDLER_2_MAX_BATCH_SIZE:100}
+  maxHandler3BatchSize: ${DISRUPTOR_HANDLER_3_MAX_BATCH_SIZE:100}
+
+---
+
+centrifugo:
+  url: ${CENTRIFUGO_URL:http://localhost:8000}
+  api-path: ${CENTRIFUGO_API_PATH:/api}
+  api-key: ${CENTRIFUGO_API_KEY:price-streaming-api-key}
+  channel: ${CENTRIFUGO_CHANNEL:price-stream}
+  timeout: ${CENTRIFUGO_TIMEOUT:2s}
+  transport: ${CENTRIFUGO_TRANSPORT:grpc}
+  grpc:
+    host: ${CENTRIFUGO_GRPC_HOST:localhost}
+    port: ${CENTRIFUGO_GRPC_PORT:10000}
+    deadline: ${CENTRIFUGO_GRPC_DEADLINE:2s}

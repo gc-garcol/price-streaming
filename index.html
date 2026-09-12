@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Price Streaming — Markets</title>
+<style>
+  :root{
+    --bg:#0b0e11; --panel:#161a1e; --panel-2:#1e2329; --line:#2b3139;
+    --text:#eaecef; --muted:#848e9c; --accent:#f0b90b;
+    --up:#0ecb81; --down:#f6465d; --down-text:#ff6b7f;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+         padding:14px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
+  .brand .dot{width:22px;height:22px;border-radius:5px;background:var(--accent);
+              display:grid;place-items:center;color:#0b0e11;font-size:13px;font-weight:800}
+  .pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
+        background:var(--panel-2);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+  .pill b{color:var(--text);font-weight:600}
+  .led{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .led.on{background:var(--up);box-shadow:0 0 8px var(--up)}
+  .led.off{background:var(--down);box-shadow:0 0 8px var(--down)}
+  .led.wait{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .spacer{flex:1}
+  .cfg{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .cfg input{background:var(--bg);border:1px solid var(--line);color:var(--text);
+             border-radius:6px;padding:6px 9px;font-size:12px;font-family:var(--mono);min-width:210px}
+  .cfg input:focus{outline:none;border-color:var(--accent)}
+  .cfg input.host{min-width:120px}
+  .cfg input.port{min-width:78px;width:78px;text-align:center}
+  .cfg label{font-size:11px;color:var(--muted);letter-spacing:.3px}
+  .cfg input::-webkit-outer-spin-button,.cfg input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .cfg input[type=number]{-moz-appearance:textfield}
+  .endpoints{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  button{background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+         border-radius:6px;padding:6px 13px;font-size:13px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#0b0e11;font-weight:600}
+  button.primary:hover{opacity:.9;color:#0b0e11}
+  main{padding:20px;max-width:1180px;margin:0 auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .card-head{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .card-head h2{margin:0;font-size:15px;font-weight:600}
+  .tablewrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:760px}
+  th,td{padding:12px 18px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{font-size:12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line);
+           cursor:pointer;user-select:none}
+  thead th:hover{color:var(--accent)}
+  thead th .arrow{opacity:.45;font-size:10px;margin-left:4px}
+  tbody tr{border-bottom:1px solid rgba(43,49,57,.55)}
+  tbody tr:hover{background:rgba(240,185,11,.04)}
+  td{font-family:var(--mono);font-size:13px}
+  .sym{font-family:inherit;font-weight:600;display:flex;align-items:center;gap:9px}
+  .sym .ico{width:26px;height:26px;border-radius:50%;background:var(--panel-2);color:var(--accent);
+            display:grid;place-items:center;font-size:10px;font-weight:700;border:1px solid var(--line)}
+  .sym small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+  .flash-up{animation:fu .7s ease-out}
+  .flash-down{animation:fd .7s ease-out}
+  @keyframes fu{0%{background:rgba(14,203,129,.28);color:var(--up)}100%{background:transparent}}
+  @keyframes fd{0%{background:rgba(246,70,93,.28);color:var(--down)}100%{background:transparent}}
+  .up{color:var(--up)} .down{color:var(--down)} .muted{color:var(--muted)}
+  .band{display:inline-flex;gap:6px;align-items:center}
+  .chip{padding:2px 7px;border-radius:4px;font-size:11px;background:var(--panel-2);border:1px solid var(--line)}
+  .foot{display:flex;align-items:center;gap:12px;padding:13px 18px;flex-wrap:wrap}
+  .empty{padding:46px 18px;text-align:center;color:var(--muted)}
+  .err{margin:0 0 14px;padding:11px 15px;border-radius:8px;background:rgba(246,70,93,.1);
+       border:1px solid rgba(246,70,93,.35);color:#ffb3bd;font-size:13px;display:none}
+  .act{padding:4px 12px;font-size:12px}
+  .act.danger{background:var(--panel-2);color:var(--down-text);border-color:rgba(246,70,93,.45)}
+  .act.danger:hover:not(:disabled){background:rgba(246,70,93,.12);border-color:var(--down);color:var(--down-text)}
+  .acts{display:inline-flex;gap:8px;justify-content:flex-end}
+  button.solid-danger{background:var(--down);border-color:var(--down);color:#fff;font-weight:600}
+  button.solid-danger:hover:not(:disabled){opacity:.9;color:#fff;border-color:var(--down)}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;place-items:center;z-index:50}
+  .overlay.open{display:grid}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(420px,92vw);
+         box-shadow:0 18px 50px rgba(0,0,0,.55)}
+  .modal h3{margin:0;padding:16px 20px;font-size:15px;border-bottom:1px solid var(--line)}
+  .modal .body{padding:20px}
+  .modal .row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .modal .row span{color:var(--muted);font-size:12px}
+  .modal .row b{font-family:var(--mono)}
+  .modal input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);
+               border-radius:8px;padding:11px 13px;font-size:16px;font-family:var(--mono)}
+  .modal input:focus,.modal select:focus{outline:none;border-color:var(--accent)}
+  .modal select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);
+                border-radius:8px;padding:11px 13px;font-size:15px;font-family:var(--mono)}
+  .modal .hint{margin-top:8px;font-size:11px;color:var(--muted)}
+  .modal .msg{margin-top:12px;font-size:12px;color:#ffb3bd;display:none}
+  .modal .foot2{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 20px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--panel-2);
+         border:1px solid var(--up);color:var(--up);padding:10px 18px;border-radius:8px;font-size:13px;
+         display:none;z-index:60}
+  .toast.show{display:block}
+  select{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:6px 9px;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="dot">P</span> Price Streaming</div>
+  <span class="pill"><span class="led wait" id="wsLed"></span> Realtime <b id="wsState">connecting…</b></span>
+  <span class="pill">Channel <b id="chName">price-stream</b></span>
+  <span class="pill">Pushes <b id="pushCount">0</b></span>
+  <span class="spacer"></span>
+  <div class="cfg">
+    <label for="hostInput">Host</label>
+    <input id="hostInput" class="host" spellcheck="false" placeholder="localhost" value="localhost">
+    <label for="apiPort">API port</label>
+    <input id="apiPort" class="port" type="number" min="1" max="65535" placeholder="8080" value="8080">
+    <label for="wsPort">WS port</label>
+    <input id="wsPort" class="port" type="number" min="1" max="65535" placeholder="8000" value="8000">
+    <button class="primary" id="applyCfg">Apply</button>
+  </div>
+</header>
+
+<main>
+  <div class="err" id="err"></div>
+  <div class="card">
+    <div class="card-head">
+      <h2>Markets</h2>
+      <span class="pill">Cached in Redis · <b id="totalCount">0</b> pairs</span>
+      <span class="endpoints" id="endpoints"></span>
+      <span class="spacer"></span>
+      <button class="primary" id="addBtn">+ Add config</button>
+      <button id="refresh">Refresh</button>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="symbolPair">Pair <span class="arrow"></span></th>
+            <th data-sort="price">Last Price <span class="arrow"></span></th>
+            <th data-sort="deltaPercent">Delta % <span class="arrow"></span></th>
+            <th data-sort="lowPrice">Band Low <span class="arrow"></span></th>
+            <th data-sort="highPrice">Band High <span class="arrow"></span></th>
+            <th data-sort="configEventAt">Config Updated <span class="arrow"></span></th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="emptyBox" class="empty" style="display:none">
+      No cached pairs yet. Create a price config, then wait for a price tick.
+    </div>
+    <div class="foot">
+      <button id="prev">‹ Prev</button>
+      <span class="pill">Page <b id="pageLabel">1 / 1</b></span>
+      <button id="next">Next ›</button>
+      <span class="spacer"></span>
+      <label class="muted" for="sizeSel">Rows</label>
+      <select id="sizeSel"><option>10</option><option selected>20</option><option>50</option><option>100</option></select>
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Edit delta percent</h3>
+    <div class="body">
+      <div class="row"><span>Pair</span><b id="mSymbol">—</b></div>
+      <div class="row"><span>Config id</span><b id="mId">—</b></div>
+      <label class="muted" for="mDelta" style="font-size:12px">Delta percent</label>
+      <input id="mDelta" type="number" step="0.000001" min="0" max="999.999999">
+      <div class="hint">0 – 999.999999, up to 6 decimals. Sent as PUT /api/price-configs/{id}.</div>
+      <div class="msg" id="mMsg"></div>
+    </div>
+    <div class="foot2">
+      <button id="mCancel">Cancel</button>
+      <button class="primary" id="mSave">Save</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <h3>Add price config</h3>
+    <div class="body">
+      <label class="muted" for="aSymbol" style="font-size:12px">Symbol pair</label>
+      <select id="aSymbol"></select>
+      <input id="aCustom" placeholder="e.g. DOGE-USDT" style="display:none;margin-top:10px" spellcheck="false">
+      <div class="hint" id="aSymbolHint">Symbols come from the cached market data.</div>
+      <label class="muted" for="aDelta" style="font-size:12px;display:block;margin-top:14px">Delta percent</label>
+      <input id="aDelta" type="number" step="0.000001" min="0" max="999.999999" value="1">
+      <div class="hint">0 – 999.999999, up to 6 decimals. Sent as POST /api/price-configs.</div>
+      <div class="msg" id="aMsg"></div>
+    </div>
+    <div class="foot2">
+      <button id="aCancel">Cancel</button>
+      <button class="primary" id="aSave">Create</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="delOverlay">
+  <div class="modal">
+    <h3>Delete price config</h3>
+    <div class="body">
+      <div class="row"><span>Pair</span><b id="dSymbol">—</b></div>
+      <div class="row"><span>Config id</span><b id="dId">—</b></div>
+      <div class="hint">This removes the config via DELETE /api/price-configs/{id}. The pair stops being
+        tracked and is evicted from the cache once the delete event propagates.</div>
+      <div class="msg" id="dMsg"></div>
+    </div>
+    <div class="foot2">
+      <button id="dCancel">Cancel</button>
+      <button class="solid-danger" id="dConfirm">Delete</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/centrifuge@3.1.2/dist/centrifuge.js"></script>
+<script>
+const DEFAULTS = { host: 'localhost', apiPort: '8080', wsPort: '8000', channel: 'price-stream' };
+const cfg = {
+  host: localStorage.getItem('ps.host') || DEFAULTS.host,
+  apiPort: localStorage.getItem('ps.apiPort') || DEFAULTS.apiPort,
+  wsPort: localStorage.getItem('ps.wsPort') || DEFAULTS.wsPort,
+  channel: DEFAULTS.channel
+};
+const apiBase = () => `http://${cfg.host}:${cfg.apiPort}`;
+const wsUrl = () => `ws://${cfg.host}:${cfg.wsPort}/connection/websocket`;
+const state = { page: 0, size: 20, sort: 'symbolPair', dir: 'asc', totalPages: 1, rows: new Map(), pushes: 0 };
+
+const $ = id => document.getElementById(id);
+$('hostInput').value = cfg.host;
+$('apiPort').value = cfg.apiPort;
+$('wsPort').value = cfg.wsPort;
+$('chName').textContent = cfg.channel;
+const showEndpoints = () => { $('endpoints').textContent = `${apiBase()}/api · ${wsUrl()}`; };
+showEndpoints();
+
+const fmtNum = (v, dp) => v === null || v === undefined ? '—'
+  : Number(v).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+const fmtPrice = v => {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  return n >= 1000 ? fmtNum(n, 2) : n >= 1 ? fmtNum(n, 4) : fmtNum(n, 8);
+};
+const fmtTime = ms => !ms ? '—' : new Date(Number(ms)).toLocaleString();
+const base = s => (s || '').split(/[-/]/)[0].slice(0, 4);
+
+function showError(msg) {
+  const el = $('err');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function sortIndicators() {
+  document.querySelectorAll('thead th[data-sort]').forEach(th => {
+    const a = th.querySelector('.arrow');
+    a.textContent = th.dataset.sort === state.sort ? (state.dir === 'asc' ? '▲' : '▼') : '';
+  });
+}
+
+function rowHtml(c) {
+  return `
+    <td><div class="sym"><span class="ico">${base(c.symbolPair)}</span>
+        <span>${c.symbolPair}<small>${c.id ? 'config #' + c.id : 'no config'}</small></span></div></td>
+    <td class="px">${fmtPrice(c.price)}</td>
+    <td>${c.deltaPercent === null || c.deltaPercent === undefined ? '<span class="muted">—</span>'
+        : '<span class="chip">' + fmtNum(c.deltaPercent, 2) + ' %</span>'}</td>
+    <td class="down">${fmtPrice(c.lowPrice)}</td>
+    <td class="up">${fmtPrice(c.highPrice)}</td>
+    <td class="muted">${fmtTime(c.configEventAt)}</td>
+    <td>${c.id
+        ? `<span class="acts">
+             <button class="act" data-edit="${c.symbolPair}">Edit delta</button>
+             <button class="act danger" data-del="${c.symbolPair}">Delete</button>
+           </span>`
+        : '<span class="muted" title="No price config exists for this pair">—</span>'}</td>`;
+}
+
+function render(list) {
+  const tbody = $('rows');
+  tbody.innerHTML = '';
+  state.rows.clear();
+  list.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = rowHtml(c);
+    tr.dataset.symbol = c.symbolPair;
+    tbody.appendChild(tr);
+    state.rows.set(c.symbolPair, { tr, price: c.price === null ? null : Number(c.price), config: c });
+  });
+  $('emptyBox').style.display = list.length ? 'none' : 'block';
+}
+
+function applyLive(c) {
+  const entry = state.rows.get(c.symbolPair);
+  if (!entry) return;
+  const next = c.price === null || c.price === undefined ? null : Number(c.price);
+  const prev = entry.price;
+  entry.tr.innerHTML = rowHtml(c);
+  entry.price = next;
+  entry.config = c;
+  if (prev !== null && next !== null && next !== prev) {
+    const cell = entry.tr.querySelector('.px');
+    const cls = next > prev ? 'flash-up' : 'flash-down';
+    cell.classList.remove('flash-up', 'flash-down');
+    void cell.offsetWidth;
+    cell.classList.add(cls);
+    cell.classList.add(next > prev ? 'up' : 'down');
+  }
+}
+
+async function load() {
+  const url = `${apiBase()}/api/full-symbol-configs?page=${state.page}&size=${state.size}&sort=${state.sort},${state.dir}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.totalPages = data.totalPages || 1;
+    $('totalCount').textContent = data.totalElements ?? 0;
+    $('pageLabel').textContent = `${(data.page ?? 0) + 1} / ${Math.max(state.totalPages, 1)}`;
+    $('prev').disabled = !!data.first;
+    $('next').disabled = !!data.last;
+    render(data.content || []);
+    showError('');
+  } catch (e) {
+    showError(`Could not load ${url} — ${e.message}. Check the API base URL and that the app is running.`);
+    render([]);
+  }
+  sortIndicators();
+}
+
+let centrifuge = null;
+function connectWs() {
+  if (centrifuge) { try { centrifuge.disconnect(); } catch (_) {} }
+  const led = $('wsLed'), label = $('wsState');
+  led.className = 'led wait'; label.textContent = 'connecting…';
+  centrifuge = new Centrifuge(wsUrl());
+  centrifuge.on('connected', () => { led.className = 'led on'; label.textContent = 'live'; });
+  centrifuge.on('connecting', () => { led.className = 'led wait'; label.textContent = 'connecting…'; });
+  centrifuge.on('disconnected', ctx => { led.className = 'led off'; label.textContent = 'offline' + (ctx && ctx.reason ? ' (' + ctx.reason + ')' : ''); });
+  const sub = centrifuge.newSubscription(cfg.channel);
+  sub.on('publication', ctx => {
+    const payload = Array.isArray(ctx.data) ? ctx.data : [ctx.data];
+    state.pushes++;
+    $('pushCount').textContent = state.pushes;
+    payload.forEach(applyLive);
+  });
+  sub.on('error', ctx => showError('Subscription error: ' + JSON.stringify(ctx.error || ctx)));
+  sub.subscribe();
+  centrifuge.connect();
+}
+
+document.querySelectorAll('thead th[data-sort]').forEach(th => th.addEventListener('click', () => {
+  const field = th.dataset.sort;
+  state.dir = state.sort === field && state.dir === 'asc' ? 'desc' : 'asc';
+  state.sort = field; state.page = 0; load();
+}));
+$('prev').onclick = () => { if (state.page > 0) { state.page--; load(); } };
+$('next').onclick = () => { if (state.page + 1 < state.totalPages) { state.page++; load(); } };
+$('sizeSel').onchange = e => { state.size = Number(e.target.value); state.page = 0; load(); };
+$('refresh').onclick = load;
+$('applyCfg').onclick = () => {
+  cfg.host = $('hostInput').value.trim() || DEFAULTS.host;
+  cfg.apiPort = ($('apiPort').value || '').trim() || DEFAULTS.apiPort;
+  cfg.wsPort = ($('wsPort').value || '').trim() || DEFAULTS.wsPort;
+  $('hostInput').value = cfg.host;
+  $('apiPort').value = cfg.apiPort;
+  $('wsPort').value = cfg.wsPort;
+  localStorage.setItem('ps.host', cfg.host);
+  localStorage.setItem('ps.apiPort', cfg.apiPort);
+  localStorage.setItem('ps.wsPort', cfg.wsPort);
+  showEndpoints();
+  state.page = 0;
+  load(); connectWs();
+};
+
+let editing = null;
+
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function openEditor(symbolPair) {
+  const entry = state.rows.get(symbolPair);
+  if (!entry || !entry.config || !entry.config.id) return;
+  editing = entry.config;
+  $('mSymbol').textContent = editing.symbolPair;
+  $('mId').textContent = '#' + editing.id;
+  $('mDelta').value = editing.deltaPercent ?? '';
+  $('mMsg').style.display = 'none';
+  $('overlay').classList.add('open');
+  $('mDelta').focus();
+  $('mDelta').select();
+}
+
+function closeEditor() { $('overlay').classList.remove('open'); editing = null; }
+
+async function saveEditor() {
+  if (!editing) return;
+  const raw = $('mDelta').value.trim();
+  const msg = $('mMsg');
+  const value = Number(raw);
+  if (raw === '' || Number.isNaN(value) || value < 0) {
+    msg.textContent = 'Enter a delta percent of 0 or greater.';
+    msg.style.display = 'block';
+    return;
+  }
+  $('mSave').disabled = true;
+  try {
+    const res = await fetch(`${apiBase()}/api/price-configs/${editing.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ symbolPair: editing.symbolPair, deltaPercent: value })
+    });
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { const body = await res.json(); detail = body.detail || body.message || detail; } catch (_) {}
+      msg.textContent = detail;
+      msg.style.display = 'block';
+      return;
+    }
+    const saved = await res.json();
+    closeEditor();
+    toast(`${saved.symbolPair} delta updated to ${saved.deltaPercent}`);
+    load();
+    setTimeout(load, 2500);
+  } catch (e) {
+    msg.textContent = 'Request failed: ' + e.message;
+    msg.style.display = 'block';
+  } finally {
+    $('mSave').disabled = false;
+  }
+}
+
+$('rows').addEventListener('click', e => {
+  const edit = e.target.closest('button[data-edit]');
+  if (edit) { openEditor(edit.dataset.edit); return; }
+  const del = e.target.closest('button[data-del]');
+  if (del) openDelete(del.dataset.del);
+});
+$('mCancel').onclick = closeEditor;
+$('mSave').onclick = saveEditor;
+$('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeEditor(); });
+$('mDelta').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveEditor();
+  if (e.key === 'Escape') closeEditor();
+});
+
+const CUSTOM = '__custom__';
+function syncCustom() {
+  const isCustom = $('aSymbol').value === CUSTOM;
+  $('aCustom').style.display = isCustom ? 'block' : 'none';
+  if (isCustom) $('aCustom').focus();
+}
+function chosenSymbol() {
+  return $('aSymbol').value === CUSTOM ? $('aCustom').value.trim().toUpperCase() : $('aSymbol').value;
+}
+
+async function loadSymbolOptions() {
+  const select = $('aSymbol');
+  const hint = $('aSymbolHint');
+  select.innerHTML = '';
+  try {
+    const res = await fetch(`${apiBase()}/api/full-symbol-configs?page=0&size=1000&sort=symbolPair,asc`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const all = data.content || [];
+    if (!all.length) {
+      select.innerHTML = `<option value="${CUSTOM}">Other — type a new pair…</option>`;
+      select.value = CUSTOM;
+      hint.textContent = 'The market cache is empty — type a pair manually.';
+      $('aSave').disabled = false;
+      syncCustom();
+      return;
+    }
+    all.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.symbolPair;
+      opt.textContent = c.id ? `${c.symbolPair} — already configured (#${c.id})` : c.symbolPair;
+      opt.dataset.configured = c.id ? '1' : '';
+      select.appendChild(opt);
+    });
+    const custom = document.createElement('option');
+    custom.value = CUSTOM;
+    custom.textContent = 'Other — type a new pair…';
+    select.appendChild(custom);
+    const free = all.find(c => !c.id);
+    select.value = free ? free.symbolPair : CUSTOM;
+    const configured = all.filter(c => c.id).length;
+    hint.textContent = `${all.length} cached symbol${all.length > 1 ? 's' : ''}, ${configured} already configured.`;
+    $('aSave').disabled = false;
+    syncCustom();
+  } catch (e) {
+    select.innerHTML = '<option value="">Could not load symbols</option>';
+    hint.textContent = 'Failed to read symbols: ' + e.message;
+    $('aSave').disabled = true;
+  }
+}
+
+function openAdd() {
+  $('aMsg').style.display = 'none';
+  $('aDelta').value = '1';
+  $('addOverlay').classList.add('open');
+  loadSymbolOptions();
+}
+
+function closeAdd() { $('addOverlay').classList.remove('open'); }
+
+async function saveAdd() {
+  const symbolPair = chosenSymbol();
+  const raw = $('aDelta').value.trim();
+  const msg = $('aMsg');
+  const value = Number(raw);
+  if (!symbolPair) { msg.textContent = 'Pick a symbol pair.'; msg.style.display = 'block'; return; }
+  if (raw === '' || Number.isNaN(value) || value < 0) {
+    msg.textContent = 'Enter a delta percent of 0 or greater.';
+    msg.style.display = 'block';
+    return;
+  }
+  $('aSave').disabled = true;
+  try {
+    const res = await fetch(`${apiBase()}/api/price-configs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ symbolPair, deltaPercent: value })
+    });
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { const body = await res.json(); detail = body.detail || body.message || detail; } catch (_) {}
+      msg.textContent = detail;
+      msg.style.display = 'block';
+      return;
+    }
+    const created = await res.json();
+    closeAdd();
+    toast(`${created.symbolPair} created with delta ${created.deltaPercent}`);
+    load();
+    setTimeout(load, 2500);
+  } catch (e) {
+    msg.textContent = 'Request failed: ' + e.message;
+    msg.style.display = 'block';
+  } finally {
+    $('aSave').disabled = false;
+  }
+}
+
+let deleting = null;
+
+function openDelete(symbolPair) {
+  const entry = state.rows.get(symbolPair);
+  if (!entry || !entry.config || !entry.config.id) return;
+  deleting = entry.config;
+  $('dSymbol').textContent = deleting.symbolPair;
+  $('dId').textContent = '#' + deleting.id;
+  $('dMsg').style.display = 'none';
+  $('delOverlay').classList.add('open');
+}
+
+function closeDelete() { $('delOverlay').classList.remove('open'); deleting = null; }
+
+async function confirmDelete() {
+  if (!deleting) return;
+  const msg = $('dMsg');
+  const target = deleting;
+  $('dConfirm').disabled = true;
+  try {
+    const res = await fetch(`${apiBase()}/api/price-configs/${target.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { const body = await res.json(); detail = body.detail || body.message || detail; } catch (_) {}
+      msg.textContent = detail;
+      msg.style.display = 'block';
+      return;
+    }
+    closeDelete();
+    toast(`${target.symbolPair} config deleted`);
+    load();
+    setTimeout(load, 2500);
+  } catch (e) {
+    msg.textContent = 'Request failed: ' + e.message;
+    msg.style.display = 'block';
+  } finally {
+    $('dConfirm').disabled = false;
+  }
+}
+
+$('dCancel').onclick = closeDelete;
+$('dConfirm').onclick = confirmDelete;
+$('delOverlay').addEventListener('click', e => { if (e.target === $('delOverlay')) closeDelete(); });
+
+$('aSymbol').onchange = syncCustom;
+$('addBtn').onclick = openAdd;
+$('aCancel').onclick = closeAdd;
+$('aSave').onclick = saveAdd;
+$('addOverlay').addEventListener('click', e => { if (e.target === $('addOverlay')) closeAdd(); });
+$('aDelta').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveAdd();
+  if (e.key === 'Escape') closeAdd();
+});
+
+load();
+connectWs();
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="830" viewBox="0 0 1440 830" font-family="Helvetica,Arial,sans-serif">
+<rect width="1440" height="830" fill="#0b0e11"/>
+<defs>
+<linearGradient id="seg" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#7c4dbe"/>
+</linearGradient>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+  <path d="M 0 0 L 10 5 L 0 10 z" fill="#9aa4b2"/>
+</marker>
+</defs>
+<text x="720" y="44" fill="#f0b90b" font-size="21" font-weight="700" text-anchor="middle">Disruptor ring buffer &#8212; 2^12 = 4096 slots (32 shown)</text>
+<path d="M 420.80 199.61 A 265 265 0 0 1 467.46 195.01 L 468.35 288.01 A 172 172 0 0 0 438.07 290.99 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 370.94 214.21 A 265 265 0 0 1 415.81 200.60 L 434.83 291.63 A 172 172 0 0 0 405.71 300.47 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 324.90 238.26 A 265 265 0 0 1 366.24 216.16 L 402.66 301.73 A 172 172 0 0 0 375.82 316.08 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 284.42 270.83 A 265 265 0 0 1 320.67 241.08 L 373.07 317.91 A 172 172 0 0 0 349.55 337.22 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 251.08 310.67 A 265 265 0 0 1 280.83 274.42 L 347.22 339.55 A 172 172 0 0 0 327.91 363.07 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 226.16 356.24 A 265 265 0 0 1 248.26 314.90 L 326.08 365.82 A 172 172 0 0 0 311.73 392.66 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 210.60 405.81 A 265 265 0 0 1 224.21 360.94 L 310.47 395.71 A 172 172 0 0 0 301.63 424.83 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 205.01 457.46 A 265 265 0 0 1 209.61 410.80 L 300.99 428.07 A 172 172 0 0 0 298.01 458.35 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 209.61 509.20 A 265 265 0 0 1 205.01 462.54 L 298.01 461.65 A 172 172 0 0 0 300.99 491.93 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 224.21 559.06 A 265 265 0 0 1 210.60 514.19 L 301.63 495.17 A 172 172 0 0 0 310.47 524.29 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 248.26 605.10 A 265 265 0 0 1 226.16 563.76 L 311.73 527.34 A 172 172 0 0 0 326.08 554.18 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 280.83 645.58 A 265 265 0 0 1 251.08 609.33 L 327.91 556.93 A 172 172 0 0 0 347.22 580.45 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 320.67 678.92 A 265 265 0 0 1 284.42 649.17 L 349.55 582.78 A 172 172 0 0 0 373.07 602.09 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 366.24 703.84 A 265 265 0 0 1 324.90 681.74 L 375.82 603.92 A 172 172 0 0 0 402.66 618.27 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 415.81 719.40 A 265 265 0 0 1 370.94 705.79 L 405.71 619.53 A 172 172 0 0 0 434.83 628.37 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 467.46 724.99 A 265 265 0 0 1 420.80 720.39 L 438.07 629.01 A 172 172 0 0 0 468.35 631.99 Z" fill="#f6465d" opacity="1" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 519.20 720.39 A 265 265 0 0 1 472.54 724.99 L 471.65 631.99 A 172 172 0 0 0 501.93 629.01 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 569.06 705.79 A 265 265 0 0 1 524.19 719.40 L 505.17 628.37 A 172 172 0 0 0 534.29 619.53 Z" fill="#f0b90b" opacity="1" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 615.10 681.74 A 265 265 0 0 1 573.76 703.84 L 537.34 618.27 A 172 172 0 0 0 564.18 603.92 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 655.58 649.17 A 265 265 0 0 1 619.33 678.92 L 566.93 602.09 A 172 172 0 0 0 590.45 582.78 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 688.92 609.33 A 265 265 0 0 1 659.17 645.58 L 592.78 580.45 A 172 172 0 0 0 612.09 556.93 Z" fill="#f0b90b" opacity="1" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 713.84 563.76 A 265 265 0 0 1 691.74 605.10 L 613.92 554.18 A 172 172 0 0 0 628.27 527.34 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 729.40 514.19 A 265 265 0 0 1 715.79 559.06 L 629.53 524.29 A 172 172 0 0 0 638.37 495.17 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 734.99 462.54 A 265 265 0 0 1 730.39 509.20 L 639.01 491.93 A 172 172 0 0 0 641.99 461.65 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 730.39 410.80 A 265 265 0 0 1 734.99 457.46 L 641.99 458.35 A 172 172 0 0 0 639.01 428.07 Z" fill="#f0b90b" opacity="1" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 715.79 360.94 A 265 265 0 0 1 729.40 405.81 L 638.37 424.83 A 172 172 0 0 0 629.53 395.71 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 691.74 314.90 A 265 265 0 0 1 713.84 356.24 L 628.27 392.66 A 172 172 0 0 0 613.92 365.82 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 659.17 274.42 A 265 265 0 0 1 688.92 310.67 L 612.09 363.07 A 172 172 0 0 0 592.78 339.55 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 619.33 241.08 A 265 265 0 0 1 655.58 270.83 L 590.45 337.22 A 172 172 0 0 0 566.93 317.91 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 573.76 216.16 A 265 265 0 0 1 615.10 238.26 L 564.18 316.08 A 172 172 0 0 0 537.34 301.73 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 524.19 200.60 A 265 265 0 0 1 569.06 214.21 L 534.29 300.47 A 172 172 0 0 0 505.17 291.63 Z" fill="url(#seg)" opacity="0.92" stroke="#0b0e11" stroke-width="1.5"/>
+<path d="M 472.54 195.01 A 265 265 0 0 1 519.20 199.61 L 501.93 290.99 A 172 172 0 0 0 471.65 288.01 Z" fill="#0ecb81" opacity="1" stroke="#0b0e11" stroke-width="1.5"/>
+<text x="491.4" y="247.6" fill="#0b0e11" font-size="15" font-weight="700" text-anchor="middle">31</text>
+<text x="687.4" y="443.6" fill="#0b0e11" font-size="15" font-weight="700" text-anchor="middle">24</text>
+<text x="638.9" y="603.6" fill="#0b0e11" font-size="15" font-weight="700" text-anchor="middle">20</text>
+<text x="533.4" y="674.1" fill="#0b0e11" font-size="15" font-weight="700" text-anchor="middle">17</text>
+<text x="448.6" y="682.4" fill="#0b0e11" font-size="15" font-weight="700" text-anchor="middle">15</text>
+<text x="470" y="452" fill="#eaecef" font-size="17" font-weight="700" text-anchor="middle">ring buffer</text>
+<text x="470" y="476" fill="#9aa4b2" font-size="13" text-anchor="middle">pre-allocated DisruptorEvent</text>
+<text x="470" y="496" fill="#9aa4b2" font-size="13" text-anchor="middle">per slot &#183; mutated in place</text>
+<rect x="345" y="78" width="270" height="74" rx="11" fill="#1e2329" stroke="#0ecb81" stroke-width="1.6"/>
+<text x="480" y="102" fill="#eaecef" font-size="14" font-weight="700" text-anchor="middle">producers (MULTI)</text>
+<text x="480" y="122" fill="#9aa4b2" font-size="12" text-anchor="middle">kafka consumer · feed scheduler</text>
+<text x="480" y="139" fill="#9aa4b2" font-size="12" text-anchor="middle">websocket stream · config refresh</text>
+<path d="M 500.0 152.0 Q 484.4 168.9 496.8 188.3" fill="none" stroke="#9aa4b2" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="40" y="92" fill="#0ecb81" font-size="12.5">producers are claiming slot 31.</text>
+<text x="40" y="110" fill="#0ecb81" font-size="12.5">They keep advancing, only checking</text>
+<text x="40" y="128" fill="#0ecb81" font-size="12.5">they never wrap past H4 cleanup.</text>
+<rect x="830" y="300" width="250" height="74" rx="11" fill="#1e2329" stroke="#f0b90b" stroke-width="1.6"/>
+<text x="955" y="324" fill="#eaecef" font-size="14" font-weight="700" text-anchor="middle">H1 domain</text>
+<text x="955" y="344" fill="#9aa4b2" font-size="12" text-anchor="middle">applies to PriceState,</text>
+<text x="955" y="361" fill="#9aa4b2" font-size="12" text-anchor="middle">recomputes the band</text>
+<path d="M 830.0 337.0 Q 778.5 378.4 741.7 433.2" fill="none" stroke="#9aa4b2" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1100" y="330" fill="#9aa4b2" font-size="12.5">reads slot 24. May run</text>
+<text x="1100" y="348" fill="#9aa4b2" font-size="12.5">forward as far as slot 30.</text>
+<rect x="830" y="430" width="250" height="64" rx="11" fill="#1e2329" stroke="#f0b90b" stroke-width="1.6"/>
+<text x="955" y="454" fill="#eaecef" font-size="14" font-weight="700" text-anchor="middle">H2 caching</text>
+<text x="955" y="474" fill="#9aa4b2" font-size="12" text-anchor="middle">batches → Redis hashes</text>
+<path d="M 830.0 462.0 Q 746.5 539.7 681.0 633.2" fill="none" stroke="#9aa4b2" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1100" y="455" fill="#9aa4b2" font-size="12.5">trails H1, never</text>
+<text x="1100" y="473" fill="#9aa4b2" font-size="12.5">overtakes it.</text>
+<rect x="760" y="570" width="250" height="64" rx="11" fill="#1e2329" stroke="#f0b90b" stroke-width="1.6"/>
+<text x="885" y="594" fill="#eaecef" font-size="14" font-weight="700" text-anchor="middle">H3 publishing</text>
+<text x="885" y="614" fill="#9aa4b2" font-size="12" text-anchor="middle">batches → Centrifugo</text>
+<path d="M 760.0 602.0 Q 647.7 649.4 549.2 721.2" fill="none" stroke="#9aa4b2" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1030" y="595" fill="#9aa4b2" font-size="12.5">flushes on endOfBatch</text>
+<text x="1030" y="613" fill="#9aa4b2" font-size="12.5">or max batch size.</text>
+<rect x="560" y="720" width="250" height="64" rx="11" fill="#1e2329" stroke="#f6465d" stroke-width="1.6"/>
+<text x="685" y="744" fill="#eaecef" font-size="14" font-weight="700" text-anchor="middle">H4 cleanup</text>
+<text x="685" y="764" fill="#9aa4b2" font-size="12" text-anchor="middle">event.reset() — gating</text>
+<path d="M 600.0 720.0 Q 520.9 715.9 443.2 731.7" fill="none" stroke="#9aa4b2" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="840" y="740" fill="#f6465d" font-size="12.5">H4 is the slowest consumer, so it gates the ring:</text>
+<text x="840" y="758" fill="#f6465d" font-size="12.5">producers block rather than wrap past slot 15.</text>
+<text x="840" y="776" fill="#f6465d" font-size="12.5">Only H4 may clear a slot for reuse.</text>
+</svg>

@@ -1,0 +1,5 @@
+databaseChangeLog:
+  - includeAll:
+      path: changes
+      relativeToChangelogFile: true
+      endsWithFilter: .xml

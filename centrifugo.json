@@ -1,0 +1,29 @@
+{
+  "token_jwks_public_endpoint": "http://host.docker.internal:8080/realms/partner/protocol/openid-connect/certs",
+  "allowed_origins": [
+    "*"
+  ],
+  "channel": {
+    "without_namespace": {
+      "history_size": 100,
+      "history_ttl": "300s",
+      "force_recovery": true,
+      "allow_subscribe_for_anonymous": true,
+      "allow_subscribe_for_client": true
+    },
+    "namespaces": [
+      {
+        "name": "private-room",
+        "presence": true,
+        "history_size": 10,
+        "history_ttl": "300s",
+        "join_leave": true,
+        "force_push_join_leave": false
+      }
+    ]
+  },
+  "allow_subscribe_for_anonymous": true,
+  "allow_subscribe_for_client": true,
+  "history_size": 100,
+  "history_ttl": "300s"
+}
