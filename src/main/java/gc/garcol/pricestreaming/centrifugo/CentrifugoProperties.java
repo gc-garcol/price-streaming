@@ -17,6 +17,9 @@ public class CentrifugoProperties {
 
     private String channel = "price-stream";
 
+    /** channel the kafka streams join result is pushed to */
+    private String streamChannel = "full-config-stream";
+
     private Duration timeout = Duration.ofSeconds(2);
 
     private CentrifugoTransportType transport = CentrifugoTransportType.REST;

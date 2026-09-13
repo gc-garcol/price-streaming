@@ -22,14 +22,22 @@ public class CentrifugoPublisher {
     }
 
     public void publish(List<FullSymbolConfig> changedConfigs) {
-        if (changedConfigs.isEmpty()) {
+        publish(properties.getChannel(), changedConfigs);
+    }
+
+    /**
+     * A failed push is logged and dropped: the caller owns state that must not roll back because
+     * a browser channel is unreachable.
+     */
+    public void publish(String channel, List<?> payload) {
+        if (payload.isEmpty()) {
             return;
         }
         try {
-            transport.publish(properties.getChannel(), changedConfigs);
+            transport.publish(channel, payload);
         } catch (RuntimeException exception) {
-            log.error("Failed to publish {} changed configs to centrifugo channel {} over {}",
-                    changedConfigs.size(), properties.getChannel(), transport.type(), exception);
+            log.error("Failed to publish {} changes to centrifugo channel {} over {}",
+                    payload.size(), channel, transport.type(), exception);
         }
     }
 }
