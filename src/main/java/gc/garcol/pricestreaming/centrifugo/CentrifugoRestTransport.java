@@ -1,6 +1,5 @@
 package gc.garcol.pricestreaming.centrifugo;
 
-import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
@@ -20,8 +19,6 @@ public class CentrifugoRestTransport implements CentrifugoTransport {
 
     private final RestClient restClient;
     private final CentrifugoProperties properties;
-    private final Map<String, Object> request = new LinkedHashMap<>();
-    private final Map<String, Object> params = new LinkedHashMap<>();
 
     public CentrifugoRestTransport(CentrifugoProperties properties) {
         this.properties = properties;
@@ -32,14 +29,18 @@ public class CentrifugoRestTransport implements CentrifugoTransport {
                 .baseUrl(properties.getUrl())
                 .requestFactory(requestFactory)
                 .build();
-        this.request.put("method", "publish");
-        this.request.put("params", params);
     }
 
     @Override
-    public void publish(String channel, List<FullSymbolConfig> changedConfigs) {
+    public void publish(String channel, List<?> payload) {
+        // Built per call rather than reused: the ring buffer and the kafka listener publish from
+        // different threads, and a shared request map would interleave their channels.
+        Map<String, Object> params = new LinkedHashMap<>();
         params.put("channel", channel);
-        params.put("data", changedConfigs);
+        params.put("data", payload);
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("method", "publish");
+        request.put("params", params);
         restClient.post()
                 .uri(properties.getApiPath())
                 .header(HttpHeaders.AUTHORIZATION, "apikey " + properties.getApiKey())

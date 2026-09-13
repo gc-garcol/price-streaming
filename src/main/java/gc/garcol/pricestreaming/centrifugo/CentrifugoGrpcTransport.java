@@ -3,7 +3,6 @@ package gc.garcol.pricestreaming.centrifugo;
 import centrifugal.centrifugo.api.Api;
 import centrifugal.centrifugo.api.CentrifugoApiGrpc;
 import com.google.protobuf.ByteString;
-import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
@@ -46,11 +45,11 @@ public class CentrifugoGrpcTransport implements CentrifugoTransport {
     }
 
     @Override
-    public void publish(String channelName, List<FullSymbolConfig> changedConfigs) {
-        byte[] payload = objectMapper.writeValueAsString(changedConfigs).getBytes(StandardCharsets.UTF_8);
+    public void publish(String channelName, List<?> payload) {
+        byte[] data = objectMapper.writeValueAsString(payload).getBytes(StandardCharsets.UTF_8);
         Api.PublishRequest request = Api.PublishRequest.newBuilder()
                 .setChannel(channelName)
-                .setData(ByteString.copyFrom(payload))
+                .setData(ByteString.copyFrom(data))
                 .build();
         Api.PublishResponse response = stub
                 .withDeadlineAfter(properties.getGrpc().getDeadline().toMillis(), TimeUnit.MILLISECONDS)

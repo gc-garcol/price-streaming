@@ -43,6 +43,23 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+    streams:
+      application-id: ${KAFKA_STREAMS_APPLICATION_ID:price-streaming-topology}
+      state-dir: ${KAFKA_STREAMS_STATE_DIR:./target/kafka-streams}
+      replication-factor: ${KAFKA_STREAMS_REPLICATION_FACTOR:1}
+      # No record cache and a short commit interval: the join is a live price feed, so every
+      # update is forwarded instead of being buffered until the next commit.
+      state-store-cache-max-size: 0B
+      properties:
+        commit.interval.ms: ${KAFKA_STREAMS_COMMIT_INTERVAL:200}
+        num.stream.threads: ${KAFKA_STREAMS_THREADS:2}
+        # One unparsable record must not stall the table.
+        deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
+        # Only price config changes travel through the repartition topic, so purging it every
+        # 30s buys nothing and redpanda answers the purge on an empty partition with
+        # OFFSET_OUT_OF_RANGE, which the admin client logs at ERROR.
+        repartition.purge.interval.ms: ${KAFKA_STREAMS_REPARTITION_PURGE_INTERVAL:600000}
+
   jpa:
     hibernate:
       # Liquibase owns the schema; Hibernate only checks that entities agree with it.
@@ -84,6 +101,28 @@ kafka:
 
 ---
 
+price-stream:
+  enabled: ${PRICE_STREAM_ENABLED:true}
+  partitions: ${PRICE_STREAM_PARTITIONS:3}
+  replicas: ${PRICE_STREAM_REPLICAS:1}
+  topic:
+    price-config-events: ${kafka.topic.price-config-events}
+    price-config-snapshot: ${PRICE_STREAM_PRICE_CONFIG_SNAPSHOT_TOPIC:stream.PRICE_CONFIG.snapshot}
+    market-price: ${PRICE_STREAM_MARKET_PRICE_TOPIC:stream.MARKET_PRICE.events}
+    full-config: ${PRICE_STREAM_FULL_CONFIG_TOPIC:stream.full-config.events}
+  store:
+    price-config: price-config-store
+    market-price: market-price-store
+    full-config: full-config-store
+  cache:
+    ttl: ${PRICE_STREAM_CACHE_TTL:30m}
+  consumer:
+    group-id: ${PRICE_STREAM_FULL_CONFIG_GROUP_ID:price-streaming-full-config}
+    max-batch-size: ${PRICE_STREAM_FULL_CONFIG_MAX_BATCH_SIZE:500}
+    concurrency: ${PRICE_STREAM_FULL_CONFIG_CONCURRENCY:1}
+
+---
+
 disruptor:
   ringBufferPowSize: 12
   shutdownTimeoutSeconds: 10
@@ -101,6 +140,7 @@ centrifugo:
   api-path: ${CENTRIFUGO_API_PATH:/api}
   api-key: ${CENTRIFUGO_API_KEY:price-streaming-api-key}
   channel: ${CENTRIFUGO_CHANNEL:price-stream}
+  stream-channel: ${CENTRIFUGO_STREAM_CHANNEL:full-config-stream}
   timeout: ${CENTRIFUGO_TIMEOUT:2s}
   transport: ${CENTRIFUGO_TRANSPORT:grpc}
   grpc:
