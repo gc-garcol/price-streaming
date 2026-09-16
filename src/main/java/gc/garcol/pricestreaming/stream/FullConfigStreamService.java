@@ -1,10 +1,11 @@
 package gc.garcol.pricestreaming.stream;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.PageResponse;
 import gc.garcol.pricestreaming.entity.StreamFullConfigEntity;
 import gc.garcol.pricestreaming.repository.redis.StreamFullConfigRedisRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +20,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "price-stream", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnPriceEngine(PriceEngine.KAFKA_STREAM)
 public class FullConfigStreamService {
 
     private final StreamFullConfigRedisRepository repository;

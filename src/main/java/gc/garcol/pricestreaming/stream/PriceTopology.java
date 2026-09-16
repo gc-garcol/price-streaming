@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.stream;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serde;
@@ -7,6 +9,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
@@ -14,7 +17,6 @@ import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.ObjectMapper;
@@ -31,7 +33,11 @@ import tools.jackson.databind.ObjectMapper;
  *                                                    ┌──────────┴──────────┐
  *                                                    ▼                     ▼
  *                                            full-config.events      full-config-store
- *                                                                  (REST paging queries it)
+ *                                                    │             (owned partitions only)
+ *                                                    ▼
+ *                                           GlobalKTable&lt;Symbol, FullConfig&gt;
+ *                                             full-config-global-store
+ *                                           (every symbol, on every instance)
  * </pre>
  *
  * The join is inner, so a symbol pair is only published once it has both an active config and a
@@ -40,7 +46,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "price-stream", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnPriceEngine(PriceEngine.KAFKA_STREAM)
 public class PriceTopology {
 
     private final PriceStreamProperties properties;
@@ -65,6 +71,25 @@ public class PriceTopology {
                 properties.getTopic().getFullConfig(),
                 Produced.with(Serdes.String(), fullConfigSerde).withName("full-config-sink"));
         return fullConfigStream;
+    }
+
+    /**
+     * A second, fully replicated view of the same join result. Every instance consumes all
+     * partitions of the topic into its own copy, so one node can answer for every symbol pair
+     * without an interactive query across the cluster or a round trip to redis.
+     *
+     * <p>Kafka streams bootstraps a global store to the end of its topic before the client reports
+     * RUNNING, so the store is never served half filled. Deletions arrive as tombstones on the
+     * compacted topic and drop the key, matching the inner join upstream.
+     */
+    @Bean
+    public GlobalKTable<String, FullConfig> fullConfigGlobalTable(StreamsBuilder builder) {
+        return builder.globalTable(
+                properties.getTopic().getFullConfig(),
+                Consumed.with(Serdes.String(), fullConfigSerde).withName("full-config-global-source"),
+                store(properties.getStore().getFullConfigGlobal(), fullConfigSerde)
+                        // The join forwards every price tick; a cache would only delay them.
+                        .withCachingDisabled());
     }
 
     /**

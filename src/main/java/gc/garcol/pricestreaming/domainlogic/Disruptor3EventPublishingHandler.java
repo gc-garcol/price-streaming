@@ -2,6 +2,8 @@ package gc.garcol.pricestreaming.domainlogic;
 
 import com.lmax.disruptor.EventHandler;
 import gc.garcol.pricestreaming.centrifugo.CentrifugoPublisher;
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -11,6 +13,7 @@ import java.util.List;
 
 @Slf4j
 @Component
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class Disruptor3EventPublishingHandler implements EventHandler<DisruptorEvent> {
 
     private final CentrifugoPublisher centrifugoPublisher;

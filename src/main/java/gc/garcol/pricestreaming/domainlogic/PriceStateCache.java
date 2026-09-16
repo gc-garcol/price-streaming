@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.domainlogic;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import gc.garcol.pricestreaming.entity.FullSymbolConfigEntity;
 import gc.garcol.pricestreaming.repository.redis.FullSymbolConfigRedisRepository;
@@ -13,6 +15,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class PriceStateCache {
 
     private static final String PHANTOM_SUFFIX = ":phantom";

@@ -2,6 +2,8 @@ package gc.garcol.pricestreaming.consumer;
 
 import gc.garcol.pricestreaming.centrifugo.CentrifugoProperties;
 import gc.garcol.pricestreaming.centrifugo.CentrifugoPublisher;
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.entity.StreamFullConfigEntity;
 import gc.garcol.pricestreaming.repository.redis.StreamFullConfigRedisRepository;
 import gc.garcol.pricestreaming.stream.FullConfig;
@@ -10,7 +12,6 @@ import gc.garcol.pricestreaming.stream.PriceStreamProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -33,7 +34,7 @@ import java.util.Set;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "price-stream", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnPriceEngine(PriceEngine.KAFKA_STREAM)
 public class FullConfigEventConsumer {
 
     private final ObjectMapper objectMapper;

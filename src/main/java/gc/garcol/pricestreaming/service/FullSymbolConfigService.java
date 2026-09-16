@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.service;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import gc.garcol.pricestreaming.dto.PageResponse;
 import gc.garcol.pricestreaming.entity.FullSymbolConfigEntity;
@@ -15,6 +17,7 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class FullSymbolConfigService {
 
     private final FullSymbolConfigRedisRepository repository;

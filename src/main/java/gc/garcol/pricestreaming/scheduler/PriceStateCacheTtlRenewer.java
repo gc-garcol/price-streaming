@@ -12,30 +12,34 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class PriceStateCacheTtlRenewer {
 
-    private final PriceStateCache priceStateCache;
     private final PriceStateProperties properties;
 
-    /** null when the kafka streams pipeline is switched off */
+    /** null when {@code price.engine} leaves the ring buffer out */
+    private final PriceStateCache priceStateCache;
+
+    /** null when {@code price.engine} leaves the kafka streams pipeline out */
     private final StreamFullConfigCache streamFullConfigCache;
 
-    public PriceStateCacheTtlRenewer(PriceStateCache priceStateCache,
-                                     PriceStateProperties properties,
+    public PriceStateCacheTtlRenewer(PriceStateProperties properties,
+                                     ObjectProvider<PriceStateCache> priceStateCache,
                                      ObjectProvider<StreamFullConfigCache> streamFullConfigCache) {
-        this.priceStateCache = priceStateCache;
         this.properties = properties;
+        this.priceStateCache = priceStateCache.getIfAvailable();
         this.streamFullConfigCache = streamFullConfigCache.getIfAvailable();
     }
 
     /**
-     * One schedule renews both redis projections: the ring buffer cache and, when the topology is
-     * running, the full config projection the kafka listener maintains.
+     * One schedule renews the redis projection of every running pipeline: the ring buffer cache,
+     * and the full config projection the kafka listener maintains.
      */
     @Scheduled(fixedDelayString = "${price-state.cache.renew-interval}",
             initialDelayString = "${price-state.cache.renew-interval}")
     public void renew() {
-        int renewed = priceStateCache.renewTtl();
-        if (renewed > 0) {
-            log.info("Renewed ttl to {} for {} cached symbol keys", properties.getCache().getTtl(), renewed);
+        if (priceStateCache != null) {
+            int renewed = priceStateCache.renewTtl();
+            if (renewed > 0) {
+                log.info("Renewed ttl to {} for {} cached symbol keys", properties.getCache().getTtl(), renewed);
+            }
         }
         if (streamFullConfigCache != null) {
             streamFullConfigCache.renewTtl();

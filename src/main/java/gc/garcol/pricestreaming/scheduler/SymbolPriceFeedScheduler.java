@@ -19,21 +19,25 @@ import java.util.concurrent.TimeUnit;
 public class SymbolPriceFeedScheduler {
 
     private final SymbolPriceFeed symbolPriceFeed;
-    private final DisruptorEventPublisher disruptorEventPublisher;
     private final PriceStateProperties properties;
 
     /**
-     * null when the kafka streams pipeline is switched off
+     * null when {@code price.engine} leaves the ring buffer out
+     */
+    private final DisruptorEventPublisher disruptorEventPublisher;
+
+    /**
+     * null when {@code price.engine} leaves the kafka streams pipeline out
      */
     private final MarketPricePublisher marketPricePublisher;
 
     public SymbolPriceFeedScheduler(SymbolPriceFeed symbolPriceFeed,
-                                    DisruptorEventPublisher disruptorEventPublisher,
                                     PriceStateProperties properties,
+                                    ObjectProvider<DisruptorEventPublisher> disruptorEventPublisher,
                                     ObjectProvider<MarketPricePublisher> marketPricePublisher) {
         this.symbolPriceFeed = symbolPriceFeed;
-        this.disruptorEventPublisher = disruptorEventPublisher;
         this.properties = properties;
+        this.disruptorEventPublisher = disruptorEventPublisher.getIfAvailable();
         this.marketPricePublisher = marketPricePublisher.getIfAvailable();
     }
 
@@ -71,11 +75,13 @@ public class SymbolPriceFeedScheduler {
     }
 
     /**
-     * The same tick feeds both pipelines: the ring buffer, and the MarketPrice topic the kafka
-     * streams topology joins against.
+     * The same tick feeds whichever pipelines {@code price.engine} selected: the ring buffer, and
+     * the MarketPrice topic the kafka streams topology joins against.
      */
     private void publish(SymbolDto symbol) {
-        disruptorEventPublisher.publishSymbolPrice(symbol);
+        if (disruptorEventPublisher != null) {
+            disruptorEventPublisher.publishSymbolPrice(symbol);
+        }
         if (marketPricePublisher != null) {
             marketPricePublisher.publish(symbol);
         }

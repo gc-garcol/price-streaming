@@ -1,9 +1,10 @@
 package gc.garcol.pricestreaming.stream;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.domainlogic.SymbolPriceFeed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "price-stream", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnPriceEngine(PriceEngine.KAFKA_STREAM)
 public class PriceStreamBootstrap implements SmartLifecycle {
 
     private static final int PHASE = Integer.MAX_VALUE - 2000;

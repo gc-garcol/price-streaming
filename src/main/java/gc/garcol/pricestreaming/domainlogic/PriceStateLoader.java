@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.domainlogic;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import gc.garcol.pricestreaming.dto.PriceConfigDto;
 import gc.garcol.pricestreaming.dto.SymbolDto;
@@ -15,6 +17,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class PriceStateLoader {
 
     private final PriceConfigRepository priceConfigRepository;

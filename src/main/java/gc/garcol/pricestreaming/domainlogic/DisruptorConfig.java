@@ -3,12 +3,13 @@ package gc.garcol.pricestreaming.domainlogic;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.DaemonThreadFactory;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties({DisruptorProperties.class, DisruptorHandlerProperties.class, PriceStateProperties.class})
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class DisruptorConfig {
 
     @Bean(destroyMethod = "")

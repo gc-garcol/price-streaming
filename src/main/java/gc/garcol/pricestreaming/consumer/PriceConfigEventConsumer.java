@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.consumer;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.constant.PriceConfigEventType;
 import gc.garcol.pricestreaming.domainlogic.DisruptorEventPublisher;
 import gc.garcol.pricestreaming.dto.PriceConfigDto;
@@ -19,6 +21,7 @@ import java.time.Instant;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class PriceConfigEventConsumer {
 
     private static final String EVENT_TYPE_HEADER = "eventType";

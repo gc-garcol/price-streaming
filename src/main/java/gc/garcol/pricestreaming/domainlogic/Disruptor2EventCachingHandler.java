@@ -1,6 +1,8 @@
 package gc.garcol.pricestreaming.domainlogic;
 
 import com.lmax.disruptor.EventHandler;
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import gc.garcol.pricestreaming.entity.FullSymbolConfigEntity;
 import gc.garcol.pricestreaming.repository.redis.FullSymbolConfigRedisRepository;
@@ -12,6 +14,7 @@ import java.util.List;
 
 @Slf4j
 @Component
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class Disruptor2EventCachingHandler implements EventHandler<DisruptorEvent> {
 
     private final FullSymbolConfigRedisRepository repository;

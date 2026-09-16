@@ -93,6 +93,12 @@ price-state:
 
 ---
 
+# Selects the pipeline: lmax (ring buffer only), kafka-stream (topology only) or both.
+price:
+  engine: ${PRICE_ENGINE:both}
+
+---
+
 kafka:
   topic:
     price-config-events: PRICE_CONFIG.events
@@ -102,7 +108,6 @@ kafka:
 ---
 
 price-stream:
-  enabled: ${PRICE_STREAM_ENABLED:true}
   partitions: ${PRICE_STREAM_PARTITIONS:3}
   replicas: ${PRICE_STREAM_REPLICAS:1}
   topic:
@@ -114,6 +119,7 @@ price-stream:
     price-config: price-config-store
     market-price: market-price-store
     full-config: full-config-store
+    full-config-global: full-config-global-store
   cache:
     ttl: ${PRICE_STREAM_CACHE_TTL:30m}
   consumer:

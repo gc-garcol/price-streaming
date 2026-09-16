@@ -59,8 +59,7 @@ Diagram sources: [`docs/high-level-design.puml`](./docs/high-level-design.puml) 
 The same writes feed a second, independent pipeline. Instead of one ring buffer holding all mutable
 state in a single thread, state lives in partitioned kafka state stores and the joining is done by
 the brokers plus a `KTable` join. The two pipelines share PostgreSQL, Debezium, Redis and
-Centrifugo, but nothing else; `price-stream.enabled=false` removes the whole topology, its topics
-and its consumer, and the ring buffer keeps working on its own.
+Centrifugo, but nothing else, so `price.engine` picks either one or both of them.
 
 ```
           PriceConfig snapshot ──┐
@@ -73,7 +72,12 @@ and its consumer, and the ring buffer keeps working on its own.
                                                    ┌──────────┴──────────┐
                                                    ▼                     ▼
                                            full-config.events      full-config-store
-                                                                 (redis projection pages it)
+                                                   │             (owned partitions only)
+                                        ┌──────────┴──────────┐
+                                        ▼                     ▼
+                                 redis projection     GlobalKTable<Symbol, FullConfig>
+                                                       full-config-global-store
+                                                     (every symbol, every instance)
 ```
 
 Topology is built in [`PriceTopology`](./src/main/java/gc/garcol/pricestreaming/stream/PriceTopology.java),
@@ -119,12 +123,55 @@ of an interactive query:
 | expiry | `StreamFullConfigCache` | every write carries the ttl, and the existing renew schedule pushes it back out so a quiet symbol does not expire while the topology still holds it |
 | query | `GET /api/stream/full-configs` | `FullConfigStreamController` paging over the projection |
 
+A `GlobalKTable` over the same topic is the second way to read the join result. Every instance
+consumes **all** partitions into its own copy, so one node answers for every symbol pair with no
+redis round trip and no interactive query routed to the partition owner — `GET
+/api/stream/full-configs/global` scans that store. Kafka Streams bootstraps a global store to the
+end of its topic before the client reports RUNNING, so it is never served half filled; until then
+the endpoint answers `503 STREAM_STORE_UNAVAILABLE`.
+
+The two reads are not interchangeable, and the difference is the retention model:
+
+| | redis projection | global state store |
+| --- | --- | --- |
+| endpoint | `GET /api/stream/full-configs` (paged) | `GET /api/stream/full-configs/global` (all symbols) |
+| holds | what the listener wrote, with a 30m ttl | whatever the compacted topic last held per key |
+| forgets a symbol | when its ttl lapses | only when a tombstone arrives |
+| cost per read | redis round trip | local RocksDB scan |
+| memory | none, shared store | a full copy of the join result per instance |
+
+So a symbol that stopped ticking drops out of the redis page once its ttl lapses while the global
+store still reports its last joined value — the store is as current as the topic, not as current as
+the feed. Compare `priceAt` if that matters to the caller.
+
 Redis failures in the listener are deliberately **not** swallowed — the batch is redelivered,
 otherwise a dropped deletion would leave a symbol pair in the projection forever. A failed
 Centrifugo push is only logged, so it never holds up the offset commit.
 
 [`index.kafkastream.html`](./index.kafkastream.html) is the browser client for this pipeline, the
 counterpart of the ring buffer page.
+
+### Choosing a pipeline
+
+`price.engine` (env `PRICE_ENGINE`) decides which halves of the application are registered at all.
+It is read by `@ConditionalOnPriceEngine`, so an unselected pipeline has no beans, no kafka
+listeners and no schedules — not a running pipeline with its output discarded.
+
+| value | ring buffer | kafka streams |
+| --- | --- | --- |
+| `lmax` | on | off |
+| `kafka-stream` | off | on |
+| `both` (default) | on | on |
+
+```shell
+java -jar target/price-streaming-0.0.1-SNAPSHOT.jar --price.engine=kafka-stream
+PRICE_ENGINE=lmax ./mvnw spring-boot:run
+```
+
+What stays shared either way: PostgreSQL and the outbox, Debezium, Redis, Centrifugo, and
+`SymbolPriceFeedScheduler`, which publishes each tick to whichever pipelines are running. The
+startup log names the selection, and an unknown value fails the context at boot rather than
+silently leaving both pipelines switched off.
 
 ### Where the two pipelines differ
 
@@ -136,7 +183,7 @@ counterpart of the ring buffer page.
 | back pressure | producers block on a full ring | consumer lag |
 | recovery | rebuild from Redis / database on boot | replay compacted topics and changelogs |
 | price source | feed scheduler **and** websocket stream client | feed scheduler only (`SymbolPriceFeedScheduler` publishes to both pipelines) |
-| read api | `/api/full-symbol-configs` | `/api/stream/full-configs` |
+| read api | `/api/full-symbol-configs` | `/api/stream/full-configs`, `/api/stream/full-configs/global` |
 | push channel | `price-stream` | `full-config-stream` |
 
 ## Setup
@@ -162,4 +209,9 @@ export POSTGRES_PASSWORD=password
 Centrifuge .proto
 ```shell
 https://github.com/centrifugal/centrifugo/blob/master/internal/apiproto/api.proto
+```
+
+```shell
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8098 --spring.kafka.streams.state-dir=./target/kafka-streams-1"
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8099 --spring.kafka.streams.state-dir=./target/kafka-streams-2"
 ```

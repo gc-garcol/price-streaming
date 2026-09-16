@@ -12,8 +12,6 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "price-stream")
 public class PriceStreamProperties {
 
-    private boolean enabled = true;
-
     private int partitions = 3;
 
     private short replicas = 1;
@@ -58,5 +56,7 @@ public class PriceStreamProperties {
         private String priceConfig = "price-config-store";
         private String marketPrice = "market-price-store";
         private String fullConfig = "full-config-store";
+        /** fully replicated copy of the join result, so any instance can answer for every symbol */
+        private String fullConfigGlobal = "full-config-global-store";
     }
 }

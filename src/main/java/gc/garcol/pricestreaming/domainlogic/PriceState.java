@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.domainlogic;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import gc.garcol.pricestreaming.dto.PriceConfigDto;
 import gc.garcol.pricestreaming.dto.SymbolDto;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class PriceState {
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);

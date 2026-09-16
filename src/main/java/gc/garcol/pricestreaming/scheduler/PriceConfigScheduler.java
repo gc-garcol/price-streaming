@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.scheduler;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.domainlogic.DisruptorEventPublisher;
 import gc.garcol.pricestreaming.dto.PriceConfigDto;
 import gc.garcol.pricestreaming.entity.PriceConfig;
@@ -15,6 +17,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class PriceConfigScheduler {
 
     private final PriceConfigRepository priceConfigRepository;

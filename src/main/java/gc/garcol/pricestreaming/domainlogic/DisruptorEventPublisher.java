@@ -3,11 +3,14 @@ package gc.garcol.pricestreaming.domainlogic;
 import com.lmax.disruptor.EventTranslatorOneArg;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.PriceConfigDto;
 import gc.garcol.pricestreaming.dto.SymbolDto;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class DisruptorEventPublisher {
 
     private static final EventTranslatorOneArg<DisruptorEvent, PriceConfigDto> PRICE_CONFIG_TRANSLATOR =

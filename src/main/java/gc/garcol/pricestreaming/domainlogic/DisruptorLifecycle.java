@@ -2,6 +2,8 @@ package gc.garcol.pricestreaming.domainlogic;
 
 import com.lmax.disruptor.TimeoutException;
 import com.lmax.disruptor.dsl.Disruptor;
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
@@ -12,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class DisruptorLifecycle implements SmartLifecycle {
 
     private static final int PHASE = Integer.MAX_VALUE - 1000;

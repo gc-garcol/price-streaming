@@ -1,6 +1,8 @@
 package gc.garcol.pricestreaming.domainlogic;
 
 import com.lmax.disruptor.EventHandler;
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class Disruptor1EventDomainHandler implements EventHandler<DisruptorEvent> {
 
     @Getter

@@ -1,5 +1,7 @@
 package gc.garcol.pricestreaming.controller;
 
+import gc.garcol.pricestreaming.config.ConditionalOnPriceEngine;
+import gc.garcol.pricestreaming.config.PriceEngine;
 import gc.garcol.pricestreaming.dto.FullSymbolConfig;
 import gc.garcol.pricestreaming.dto.PageResponse;
 import gc.garcol.pricestreaming.service.FullSymbolConfigService;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/full-symbol-configs")
 @RequiredArgsConstructor
 @Tag(name = "Full symbol configs", description = "Cached price state served from redis")
+@ConditionalOnPriceEngine(PriceEngine.LMAX)
 public class FullSymbolConfigController {
 
     private final FullSymbolConfigService service;
