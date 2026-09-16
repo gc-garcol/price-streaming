@@ -54,6 +54,91 @@ State lives only in H1, which is single threaded by construction, so `PriceState
 Diagram sources: [`docs/high-level-design.puml`](./docs/high-level-design.puml) (PlantUML),
 [`docs/ring-buffer.svg`](./docs/ring-buffer.svg) (SVG)
 
+## Kafka Streams architecture
+
+The same writes feed a second, independent pipeline. Instead of one ring buffer holding all mutable
+state in a single thread, state lives in partitioned kafka state stores and the joining is done by
+the brokers plus a `KTable` join. The two pipelines share PostgreSQL, Debezium, Redis and
+Centrifugo, but nothing else; `price-stream.enabled=false` removes the whole topology, its topics
+and its consumer, and the ring buffer keeps working on its own.
+
+```
+          PriceConfig snapshot ──┐
+                                 ├── latest wins ──▶ KTable<Symbol, PriceConfig>
+          PriceConfig CDC ───────┘                            │
+                                                              │ INNER JOIN
+                                                              ▼
+          MarketPrice ──────────▶ KTable<Symbol, Price> ──▶ KTable<Symbol, FullConfig>
+                                                              │
+                                                   ┌──────────┴──────────┐
+                                                   ▼                     ▼
+                                           full-config.events      full-config-store
+                                                                 (redis projection pages it)
+```
+
+Topology is built in [`PriceTopology`](./src/main/java/gc/garcol/pricestreaming/stream/PriceTopology.java),
+wiring in [`PriceStreamConfig`](./src/main/java/gc/garcol/pricestreaming/stream/PriceStreamConfig.java).
+
+### Topics
+
+Every topic is a table changelog keyed by symbol pair, so all of them are **compacted** and share
+the same partition count — without co-partitioning the join sides would not line up.
+
+| topic | key | written by | role |
+| --- | --- | --- | --- |
+| `PRICE_CONFIG.events` | aggregate id | Debezium outbox connector | config changes, re-keyed to symbol pair inside the topology |
+| `stream.PRICE_CONFIG.snapshot` | symbol pair | `PriceConfigSnapshotPublisher` | full database load, published at startup |
+| `stream.MARKET_PRICE.events` | symbol pair | `MarketPricePublisher` | price ticks from the feed scheduler |
+| `stream.full-config.events` | symbol pair | the topology | join result, plus a tombstone when a pair leaves the join |
+
+### Join semantics
+
+| Aspect | Value |
+| --- | --- |
+| Config table | outbox CDC `merge` snapshot, then `groupByKey().reduce(PriceConfigEvent::latest)` — the revision with the highest `configEventAt` wins, so startup order between the two producers does not matter |
+| Deletions | a `PriceConfigDeleted` event reduces to `deleted=true`, and `filter(!deleted)` turns it into a tombstone, which drops the pair from the join |
+| CDC parsing | `PriceConfigCdcProcessor` is a `FixedKeyProcessor`, not a `mapValues`, because the event type only exists in the `eventType` header; unparsable rows are dropped instead of forwarded |
+| Price table | `builder.table(...)` straight off `MARKET_PRICE.events` — already keyed by symbol pair, so no repartition |
+| Join type | **inner** — a symbol pair is published only once it has both an active config and a price, and disappears again when either side goes away |
+| Derived fields | `FullConfig.join` computes `lowPrice` / `highPrice` from `price ± price * deltaPercent / 100`, scaled 8 / 6 with `HALF_UP` |
+| Latency | `state-store-cache-max-size: 0B` and `commit.interval.ms: 200` — every update is forwarded instead of being buffered until the next commit |
+| Serdes | `JacksonJsonSerde` pinned per target class with `noTypeInfo().ignoreTypeHeaders()`, so no `gc.garcol` class names travel in the records |
+| Bootstrap | `PriceStreamBootstrap` (a `SmartLifecycle` in an earlier phase than the streams client) seeds both source topics before the tables are built; a broker failure there is logged, not fatal, since the topology catches up from the compacted topics |
+| Failure isolation | a failed stream thread is replaced (`REPLACE_THREAD`) and deserialization errors use `LogAndContinueExceptionHandler`, so one bad record cannot leave the store unqueryable |
+
+### Serving the join result
+
+An instance's state store only holds the partitions it owns, so paging is served from Redis instead
+of an interactive query:
+
+| step | class | behaviour |
+| --- | --- | --- |
+| projection | `FullConfigEventConsumer` | batch listener (`max-batch-size` 500) that collapses a poll to the last record per key, then one `saveAll` / `deleteAllById` per batch |
+| push | `CentrifugoPublisher` | the same collapsed batch goes to the `full-config-stream` channel; a tombstone becomes a `FullConfigDeletion` so subscribers drop the row |
+| storage | `StreamFullConfigEntity` | its own Redis keyspace (`price-streaming:stream:full-config`), separate from the ring buffer projection |
+| expiry | `StreamFullConfigCache` | every write carries the ttl, and the existing renew schedule pushes it back out so a quiet symbol does not expire while the topology still holds it |
+| query | `GET /api/stream/full-configs` | `FullConfigStreamController` paging over the projection |
+
+Redis failures in the listener are deliberately **not** swallowed — the batch is redelivered,
+otherwise a dropped deletion would leave a symbol pair in the projection forever. A failed
+Centrifugo push is only logged, so it never holds up the offset commit.
+
+[`index.kafkastream.html`](./index.kafkastream.html) is the browser client for this pipeline, the
+counterpart of the ring buffer page.
+
+### Where the two pipelines differ
+
+| | ring buffer | kafka streams |
+| --- | --- | --- |
+| state | in process, single thread, `PriceState` | partitioned RocksDB state stores + changelogs |
+| joining | domain handler code | `KTable` inner join |
+| scaling | one JVM owns everything | partitions spread across stream threads and instances |
+| back pressure | producers block on a full ring | consumer lag |
+| recovery | rebuild from Redis / database on boot | replay compacted topics and changelogs |
+| price source | feed scheduler **and** websocket stream client | feed scheduler only (`SymbolPriceFeedScheduler` publishes to both pipelines) |
+| read api | `/api/full-symbol-configs` | `/api/stream/full-configs` |
+| push channel | `price-stream` | `full-config-stream` |
+
 ## Setup
 ```shell
 docker compose up -d
